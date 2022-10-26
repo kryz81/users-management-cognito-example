@@ -1,0 +1,59 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Globals:
+  Function:
+    Timeout: 20
+    Runtime: java11
+    MemorySize: 512
+    Environment:
+      Variables:
+        CLIENT_ID: 7vd60l6430frnm5u4gon5fve1a
+        CLIENT_SECRET: 9ak3pgukbcptcjtlp1ursuk8sjhn0n0jrj8mr3r9sl5vlvhb9pu
+
+Resources:
+  Test:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: UsersManagement
+      Handler: dev.kryz.handlers.Test::handleRequest
+      Architectures:
+        - x86_64
+      Environment:
+        Variables:
+          JAVA_TOOL_OPTIONS: -XX:+TieredCompilation -XX:TieredStopAtLevel=1
+      Events:
+        SignUp:
+          Type: HttpApi
+          Properties:
+            Path: /
+            Method: GET
+            ApiId: !Ref HttpApi
+
+  UserSignUp:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: UsersManagement
+      Handler: dev.kryz.handlers.UserSignUp::handleRequest
+      Architectures:
+        - x86_64
+      Environment:
+        Variables:
+          JAVA_TOOL_OPTIONS: -XX:+TieredCompilation -XX:TieredStopAtLevel=1
+      Events:
+        SignUp:
+          Type: HttpApi
+          Properties:
+            Path: /signup
+            Method: POST
+            ApiId: !Ref HttpApi
+
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 200
+
+Outputs:
+  UsersManagementEndpoint:
+    Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/"
