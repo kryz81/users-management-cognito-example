@@ -6,18 +6,21 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import dev.kryz.services.AuthUserDetailsService;
+import dev.kryz.services.UserDetailsService;
 import dev.kryz.utils.ErrorResponse;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public class AuthUserDetails implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
-    private final AuthUserDetailsService service;
+public class UserDetails implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+    private final UserDetailsService service;
 
-    public AuthUserDetails() {
-        this.service = new AuthUserDetailsService();
+    private final String userPoolId;
+
+    public UserDetails() {
+        this.service = new UserDetailsService();
+        this.userPoolId = System.getenv("COGNITO_USER_POOL_ID");
     }
 
     @Override
@@ -28,14 +31,14 @@ public class AuthUserDetails implements RequestHandler<APIGatewayProxyRequestEve
         response.withHeaders(headers);
 
         try {
-            String accessToken = input.getHeaders().get("authorization");
+            String username = input.getPathParameters().get("userName");
 
-            if (accessToken == null || accessToken.equals("")) {
-                return response.withStatusCode(401).withBody(new ErrorResponse("No access token found").getAsString());
+            if (username == null || username.equals("")) {
+                return response.withStatusCode(404).withBody(new ErrorResponse("Invalid username").getAsString());
             }
 
             // log in user
-            JsonObject authData = service.getDetails(accessToken);
+            JsonObject authData = service.getDetailsByUsername(username, userPoolId);
 
             // convert auth data to string
             String responseBody = new Gson().toJson(authData, JsonObject.class);

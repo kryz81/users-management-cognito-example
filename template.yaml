@@ -14,6 +14,22 @@ Globals:
         JAVA_TOOL_OPTIONS: -XX:+TieredCompilation -XX:TieredStopAtLevel=1
 
 Resources:
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Auth:
+        DefaultAuthorizer: LambdaAuthorizer
+        Authorizers:
+          LambdaAuthorizer:
+            FunctionPayloadType: REQUEST
+            FunctionArn: !GetAtt LambdaAuthorizer.Arn
+            FunctionInvokeRole: !GetAtt LambdaAuthorizerAccessRole.Arn
+            EnableSimpleResponses: true
+            AuthorizerPayloadFormatVersion: "2.0"
+            Identity:
+              Headers:
+                - Authorization
+
   Test:
     Type: AWS::Serverless::Function
     Properties:
@@ -28,6 +44,8 @@ Resources:
             Path: /
             Method: GET
             ApiId: !Ref HttpApi
+            Auth:
+              Authorizer: NONE
 
   UserSignUp:
     Type: AWS::Serverless::Function
@@ -43,6 +61,8 @@ Resources:
             Path: /signup
             Method: POST
             ApiId: !Ref HttpApi
+            Auth:
+              Authorizer: NONE
 
   UserConfirmSignUp:
     Type: AWS::Serverless::Function
@@ -58,6 +78,8 @@ Resources:
             Path: /confirm
             Method: POST
             ApiId: !Ref HttpApi
+            Auth:
+              Authorizer: NONE
 
   Login:
     Type: AWS::Serverless::Function
@@ -73,6 +95,8 @@ Resources:
             Path: /login
             Method: POST
             ApiId: !Ref HttpApi
+            Auth:
+              Authorizer: NONE
 
   AddUserToGroup:
     Type: AWS::Serverless::Function
@@ -111,11 +135,56 @@ Resources:
             Method: GET
             ApiId: !Ref HttpApi
 
-  HttpApi:
-    Type: AWS::Serverless::HttpApi
+  UserDetails:
+    Type: AWS::Serverless::Function
     Properties:
-      DefaultRouteSettings:
-        ThrottlingBurstLimit: 200
+      CodeUri: UsersManagement
+      Handler: dev.kryz.handlers.UserDetails::handleRequest
+      Architectures:
+        - x86_64
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - 'cognito-idp:AdminGetUser'
+              Resource: '{{resolve:ssm:users-cognito-user-pool-arn:1}}'
+      Events:
+        AuthUserDetails:
+          Type: HttpApi
+          Properties:
+            Path: /users/{userName}
+            Method: GET
+            ApiId: !Ref HttpApi
+
+  LambdaAuthorizer:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: UsersManagement
+      Handler: dev.kryz.services.authorizers.LambdaAuthorizer::handleRequest
+      Architectures:
+        - x86_64
+
+  LambdaAuthorizerAccessRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - apigateway.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: MyPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: 'lambda:InvokeFunction'
+                Resource: !GetAtt LambdaAuthorizer.Arn
 
 Outputs:
   UsersManagementEndpoint:
