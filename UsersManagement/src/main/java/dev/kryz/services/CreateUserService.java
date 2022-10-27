@@ -24,6 +24,10 @@ public class CreateUserService {
                 .build();
     }
 
+    public CreateUserService(CognitoIdentityProviderClient client) {
+        this.client = client;
+    }
+
     public JsonObject createUser(JsonObject userData, ClientCredentials clientCredentials) {
         // get date from payload
         String username = userData.get("username").getAsString();

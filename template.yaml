@@ -8,8 +8,8 @@ Globals:
     MemorySize: 512
     Environment:
       Variables:
-        CLIENT_ID: 7vd60l6430frnm5u4gon5fve1a
-        CLIENT_SECRET: 9ak3pgukbcptcjtlp1ursuk8sjhn0n0jrj8mr3r9sl5vlvhb9pu
+        CLIENT_ID: '{{resolve:ssm:users-client-id:1}}'
+        CLIENT_SECRET: '{{resolve:ssm:users-client-secret:1}}'
 
 Resources:
   Test:
@@ -45,6 +45,24 @@ Resources:
           Type: HttpApi
           Properties:
             Path: /signup
+            Method: POST
+            ApiId: !Ref HttpApi
+
+  UserConfirmSignUp:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: UsersManagement
+      Handler: dev.kryz.handlers.UserConfirmSignUp::handleRequest
+      Architectures:
+        - x86_64
+      Environment:
+        Variables:
+          JAVA_TOOL_OPTIONS: -XX:+TieredCompilation -XX:TieredStopAtLevel=1
+      Events:
+        SignUp:
+          Type: HttpApi
+          Properties:
+            Path: /confirm
             Method: POST
             ApiId: !Ref HttpApi
 
